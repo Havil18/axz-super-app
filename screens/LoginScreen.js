@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }) {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const { setUserId, setUserEmail, setAccessToken } = useUser();
+  const { updateAuthData } = useUser();
 
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
@@ -51,10 +51,11 @@ export default function LoginScreen({ navigation }) {
       } catch (jsonErr) {}
 
       if (response.ok && data.access_token) {
-        setUserId(data.user?.id || null);
-        setUserEmail(data.user?.email || email || null);
-        setAccessToken(data.access_token);
-        navigation.navigate('Landing');
+        await updateAuthData(
+          data.user?.email || email || null,
+          data.user?.id || null,
+          data.access_token
+        );
       } else {
         if (data.error_code === 'invalid_credentials' || data.msg === 'Invalid login credentials') {
           setLoginError('Invalid email or password');

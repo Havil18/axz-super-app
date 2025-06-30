@@ -14,7 +14,7 @@ export default function Navbar({ navigation }) {
   const menuAnim = new Animated.Value(0);
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
-  const { userEmail, userId, accessToken } = useUser();
+  const { userEmail, userId, accessToken, logout } = useUser();
   const { theme, toggleTheme } = useTheme();
 
   // Add mock transactions data
@@ -114,6 +114,11 @@ export default function Navbar({ navigation }) {
     }
   }, [walletModalVisible, userId, accessToken]);
 
+  const handleLogout = async () => {
+    await logout();
+    // No need to navigate - the Navigation component will handle it
+  };
+
   const renderMobileMenu = () => {
     if (!isMobile) return null;
 
@@ -135,7 +140,7 @@ export default function Navbar({ navigation }) {
         ))}
         <TouchableOpacity 
           style={styles.mobileLogoutButton} 
-          onPress={() => navigation.navigate('Login')}
+          onPress={handleLogout}
         >
           <Text style={styles.mobileLogoutText}>Logout</Text>
         </TouchableOpacity>
@@ -181,7 +186,7 @@ export default function Navbar({ navigation }) {
             <TouchableOpacity key="Blog" style={styles.linkButton} activeOpacity={0.8} onPress={() => navigation.navigate('Blog')}>
               <Text style={[styles.linkText, { color: theme.text }]}>Blog</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </View>
@@ -214,7 +219,7 @@ export default function Navbar({ navigation }) {
           >
             <Text style={styles.walletSectionText}>HC wallet</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.modalLogoutButton} onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity style={styles.modalLogoutButton} onPress={handleLogout}>
             <Text style={styles.modalLogoutText}>Logout</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -242,7 +247,7 @@ export default function Navbar({ navigation }) {
                 {/* Balance Overview */}
                 <View style={{ marginBottom: 18, width: '100%', alignItems: 'center' }}>
                   <Text style={{ fontSize: 28, fontWeight: 'bold', color: theme.primary, marginBottom: 4 }}>
-                    ${walletInfo.balance?.toFixed(2) ?? '0.00'}
+                    <Text style={{ fontWeight: 'bold', color: '#FFB300', fontSize: 24 }}>HC</Text> {walletInfo.balance?.toFixed(2) ?? '0.00'}
                   </Text>
                   <Text style={{ color: theme.secondary, fontSize: 15, marginBottom: 2 }}>Wallet Balance</Text>
                   <Text style={{ color: theme.text, fontSize: 13 }}>Wallet ID: <Text style={{ fontWeight: 'bold' }}>{walletInfo.id}</Text></Text>
@@ -250,25 +255,34 @@ export default function Navbar({ navigation }) {
                     {walletInfo.status === 'active' ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
-                {/* Transactions Table */}
-                <View style={{ width: '100%', backgroundColor: theme.card, borderRadius: 10, padding: 12, boxShadow: '0 2px 8px #0001', marginBottom: 8 }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8, color: theme.text }}>Recent Transactions</Text>
+                {/* Transactions Table - Redesigned */}
+                <View style={{ width: '100%', backgroundColor: theme.card, borderRadius: 16, padding: 0, boxShadow: '0 2px 8px #0001', marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#f2f2f2' }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 0, color: theme.text, padding: 16, paddingBottom: 8 }}>Recent Transactions</Text>
                   {mockTransactions.length === 0 ? (
                     <Text style={{ color: theme.secondary, textAlign: 'center', marginVertical: 16 }}>No transactions found.</Text>
                   ) : (
-                    <View style={{ maxHeight: 220 }}>
-                      <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 4, marginBottom: 4 }}>
-                        <Text style={{ flex: 2, fontWeight: 'bold', color: theme.secondary, fontSize: 13 }}>Date</Text>
-                        <Text style={{ flex: 3, fontWeight: 'bold', color: theme.secondary, fontSize: 13 }}>Description</Text>
-                        <Text style={{ flex: 2, fontWeight: 'bold', color: theme.secondary, fontSize: 13, textAlign: 'right' }}>Amount</Text>
-                      </View>
-                      {mockTransactions.map(txn => (
-                        <View key={txn.id} style={{ flexDirection: 'row', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f3f3f3' }}>
-                          <Text style={{ flex: 2, color: theme.text, fontSize: 14 }}>{txn.date}</Text>
-                          <Text style={{ flex: 3, color: theme.text, fontSize: 14 }}>{txn.description}</Text>
-                          <Text style={{ flex: 2, textAlign: 'right', fontWeight: 'bold', fontSize: 14, color: txn.type === 'credit' ? 'green' : 'red' }}>
-                            {txn.type === 'credit' ? '+' : '-'}${Math.abs(txn.amount).toFixed(2)}
-                          </Text>
+                    <View style={{ maxHeight: 240 }}>
+                      {mockTransactions.map((txn, idx) => (
+                        <View key={txn.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: idx % 2 === 0 ? '#fafbfc' : '#fff', borderBottomWidth: idx === mockTransactions.length - 1 ? 0 : 1, borderBottomColor: '#f2f2f2' }}>
+                          {/* Icon */}
+                          <View style={{ width: 32, alignItems: 'center', marginRight: 10 }}>
+                            {txn.type === 'credit' ? (
+                              <Text style={{ fontSize: 18, color: 'green' }}>↑</Text>
+                            ) : (
+                              <Text style={{ fontSize: 18, color: 'red' }}>↓</Text>
+                            )}
+                          </View>
+                          {/* Date & Description */}
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, color: theme.text, fontWeight: 'bold' }}>{txn.description}</Text>
+                            <Text style={{ fontSize: 12, color: theme.secondary }}>{txn.date}</Text>
+                          </View>
+                          {/* Amount */}
+                          <View style={{ minWidth: 90, alignItems: 'flex-end' }}>
+                            <Text style={{ fontWeight: 'bold', fontSize: 15, color: txn.type === 'credit' ? 'green' : 'red' }}>
+                              {txn.type === 'credit' ? '+' : '-'}<Text style={{ color: '#FFB300', fontWeight: 'bold' }}>HC</Text>{Math.abs(txn.amount).toFixed(2)}
+                            </Text>
+                          </View>
                         </View>
                       ))}
                     </View>
