@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Animated, Dimensions, FlatList, Easing } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Animated, Dimensions, FlatList, Easing, useWindowDimensions } from 'react-native';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useTheme } from '../contexts/ThemeContext';
@@ -234,6 +234,342 @@ function AnimatedHero({ theme }) {
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
+    </Animated.View>
+  );
+}
+
+function TestimonialCarousel({ testimonials }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [cardsPerPage, setCardsPerPage] = useState(3);
+  const [containerWidth, setContainerWidth] = useState(900);
+  const scrollViewRef = useRef(null);
+  const autoScrollRef = useRef(null);
+  const isPaused = useRef(false);
+
+  // Responsive card count and container width
+  useEffect(() => {
+    function updateLayout() {
+      const width = Dimensions.get('window').width;
+      setContainerWidth(width);
+      if (width < 600) setCardsPerPage(1);
+      else if (width < 900) setCardsPerPage(2);
+      else if (width < 1200) setCardsPerPage(3);
+      else setCardsPerPage(4);
+    }
+    updateLayout();
+    Dimensions.addEventListener('change', updateLayout);
+    return () => Dimensions.removeEventListener('change', updateLayout);
+  }, []);
+
+  // Infinite loop: clone first N cards to end
+  const extendedTestimonials = [...testimonials, ...testimonials.slice(0, cardsPerPage)];
+  const totalPages = Math.ceil(testimonials.length / cardsPerPage);
+  const cardWidth = Math.min(340, Math.floor(containerWidth / cardsPerPage) - 24); // 24px gap
+  const gap = 24;
+
+  // Auto-scroll logic
+  useEffect(() => {
+    if (isPaused.current) return;
+    autoScrollRef.current = setInterval(() => {
+      handleRight();
+    }, 5000);
+    return () => clearInterval(autoScrollRef.current);
+  }, [currentPage, cardsPerPage, testimonials.length]);
+
+  // Pause on hover/touch
+  const pauseAutoScroll = () => {
+    isPaused.current = true;
+    clearInterval(autoScrollRef.current);
+  };
+  const resumeAutoScroll = () => {
+    isPaused.current = false;
+    autoScrollRef.current = setInterval(() => {
+      handleRight();
+    }, 5000);
+  };
+
+  // Navigation
+  const handleLeft = () => {
+    pauseAutoScroll();
+    let nextPage = currentPage - 1;
+    if (nextPage < 0) {
+      nextPage = totalPages - 1;
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: (testimonials.length) * (cardWidth + gap), animated: false });
+      }
+      setTimeout(() => {
+        setCurrentPage(nextPage);
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ x: nextPage * cardsPerPage * (cardWidth + gap), animated: true });
+        }
+      }, 10);
+      return;
+    }
+    setCurrentPage(nextPage);
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: nextPage * cardsPerPage * (cardWidth + gap), animated: true });
+    }
+  };
+  const handleRight = () => {
+    pauseAutoScroll();
+    let nextPage = currentPage + 1;
+    if (nextPage >= totalPages) {
+      // Go to the cloned set, then jump back to start
+      setCurrentPage(nextPage);
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: nextPage * cardsPerPage * (cardWidth + gap), animated: true });
+      }
+      setTimeout(() => {
+        setCurrentPage(0);
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ x: 0, animated: false });
+        }
+      }, 400);
+      return;
+    }
+    setCurrentPage(nextPage);
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: nextPage * cardsPerPage * (cardWidth + gap), animated: true });
+    }
+  };
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const onTouchStart = (e) => {
+    pauseAutoScroll();
+    touchStartX = e.nativeEvent.pageX;
+  };
+  const onTouchEnd = (e) => {
+    touchEndX = e.nativeEvent.pageX;
+    const dx = touchEndX - touchStartX;
+    if (dx > 40) handleLeft();
+    else if (dx < -40) handleRight();
+    resumeAutoScroll();
+  };
+
+  // Dot navigation
+  const goToPage = (page) => {
+    pauseAutoScroll();
+    setCurrentPage(page);
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: page * cardsPerPage * (cardWidth + gap), animated: true });
+    }
+    setTimeout(resumeAutoScroll, 1000);
+  };
+
+  // Ensure only full cards are visible
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ x: currentPage * cardsPerPage * (cardWidth + gap), animated: true });
+    }
+  }, [currentPage, cardsPerPage, cardWidth]);
+
+  return (
+    <View
+      style={{ width: '100%', alignItems: 'center', position: 'relative', marginBottom: 24 }}
+      onMouseEnter={pauseAutoScroll}
+      onMouseLeave={resumeAutoScroll}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', position: 'relative', justifyContent: 'center' }}>
+        {/* Left Arrow */}
+        <TouchableOpacity onPress={handleLeft} style={{ zIndex: 2, padding: 8, opacity: 1, marginRight: 8 }}>
+          <Text style={{ fontSize: 28, color: '#007AFF', fontWeight: 'bold' }}>{'‹'}</Text>
+        </TouchableOpacity>
+        {/* Scrollable Cards */}
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          style={{ flex: 1, maxWidth: '100%' }}
+          contentContainerStyle={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'stretch', minHeight: 240 }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          {extendedTestimonials.slice(currentPage * cardsPerPage, currentPage * cardsPerPage + cardsPerPage + cardsPerPage).map((testimonial, idx) => (
+            <View
+              key={testimonial.id + '-' + idx}
+              style={{
+                width: cardWidth,
+                minHeight: 180,
+                height: 220,
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                marginLeft: idx === 0 ? 0 : gap,
+                marginRight: idx === cardsPerPage - 1 ? 0 : 0,
+                padding: 20,
+                shadowColor: '#007AFF',
+                shadowOpacity: 0.08,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                boxSizing: 'border-box',
+                transition: 'box-shadow 0.2s, transform 0.2s',
+              }}
+            >
+              <Text style={{ fontSize: 16, fontStyle: 'italic', color: '#444', marginBottom: 15, lineHeight: 24 }}>
+                " {testimonial.quote} "
+              </Text>
+              <View style={{ marginTop: 18 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>- {testimonial.author}</Text>
+                <Text style={{ fontSize: 13, color: '#777' }}>{testimonial.role}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        {/* Right Arrow */}
+        <TouchableOpacity onPress={handleRight} style={{ zIndex: 2, padding: 8, opacity: 1, marginLeft: 8 }}>
+          <Text style={{ fontSize: 28, color: '#007AFF', fontWeight: 'bold' }}>{'›'}</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Dot Indicators */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
+        {Array.from({ length: totalPages }).map((_, idx) => (
+          <TouchableOpacity
+            key={idx}
+            onPress={() => goToPage(idx)}
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 5,
+              backgroundColor: idx === currentPage ? '#007AFF' : '#e3eaf2',
+              marginHorizontal: 5,
+              borderWidth: idx === currentPage ? 2 : 1,
+              borderColor: idx === currentPage ? '#007AFF' : '#e3eaf2',
+              transition: 'background 0.2s, border 0.2s',
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function AboutUsSection({ theme, aboutSectionAnimatedStyle }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 700;
+  // Modern, human-centric SVG illustration (from Undraw, e.g. 'Collaboration')
+  const Illustration = () => (
+    <svg
+      viewBox="0 0 800 600"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ width: '100%', height: isMobile ? 180 : 260, maxWidth: 400, borderRadius: 24, boxShadow: Platform.OS === 'web' ? '0 4px 24px #007aff18' : undefined, background: 'transparent' }}
+      aria-label="People collaborating illustration"
+    >
+      <rect width="800" height="600" fill="none" />
+      <ellipse cx="400" cy="570" rx="320" ry="30" fill="#e0f2fe" />
+      {/* Main device */}
+      <rect x="250" y="180" width="300" height="200" rx="32" fill="#fff" stroke="#bae6fd" strokeWidth="4" />
+      <rect x="270" y="210" width="260" height="140" rx="18" fill="#f9fbfd" />
+      {/* Person 1 */}
+      <ellipse cx="340" cy="340" rx="32" ry="32" fill="#38bdf8" />
+      <ellipse cx="340" cy="330" rx="16" ry="16" fill="#fff" />
+      <rect x="320" y="355" width="40" height="60" rx="16" fill="#bae6fd" />
+      {/* Person 2 */}
+      <ellipse cx="460" cy="340" rx="32" ry="32" fill="#34d399" />
+      <ellipse cx="460" cy="330" rx="16" ry="16" fill="#fff" />
+      <rect x="440" y="355" width="40" height="60" rx="16" fill="#a7f3d0" />
+      {/* Person 3 (center, sitting) */}
+      <ellipse cx="400" cy="370" rx="28" ry="28" fill="#fbbf24" />
+      <ellipse cx="400" cy="362" rx="13" ry="13" fill="#fff" />
+      <rect x="385" y="390" width="30" height="40" rx="12" fill="#fde68a" />
+      {/* Devices and UI */}
+      <rect x="320" y="220" width="160" height="20" rx="8" fill="#e0f2fe" />
+      <rect x="320" y="250" width="80" height="16" rx="6" fill="#bae6fd" />
+      <rect x="410" y="250" width="60" height="16" rx="6" fill="#a7f3d0" />
+      <rect x="320" y="280" width="150" height="12" rx="5" fill="#e0f2fe" />
+      {/* Chat bubble */}
+      <rect x="500" y="200" width="80" height="32" rx="12" fill="#fff" stroke="#bae6fd" strokeWidth="2" />
+      <ellipse cx="540" cy="216" rx="8" ry="8" fill="#38bdf8" />
+      <rect x="510" y="210" width="40" height="8" rx="4" fill="#e0f2fe" />
+    </svg>
+  );
+
+  return (
+    <Animated.View
+      style={[
+        aboutSectionAnimatedStyle,
+        {
+          backgroundColor: '#f9fbfd',
+          borderRadius: 24,
+          margin: 16,
+          padding: isMobile ? 20 : 40,
+          boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff18' : undefined,
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: 320,
+        },
+      ]}
+      accessible accessibilityLabel="About Us section"
+    >
+      {/* Abstract blurred background shapes */}
+      {Platform.OS === 'web' && (
+        <svg style={{ position: 'absolute', top: -60, left: -80, zIndex: 0 }} width="300" height="300" viewBox="0 0 300 300">
+          <ellipse cx="150" cy="150" rx="120" ry="80" fill="#bae6fd" opacity="0.4" filter="blur(20px)" />
+        </svg>
+      )}
+      {Platform.OS === 'web' && (
+        <svg style={{ position: 'absolute', bottom: -40, right: -60, zIndex: 0 }} width="220" height="220" viewBox="0 0 220 220">
+          <ellipse cx="110" cy="110" rx="90" ry="60" fill="#a7f3d0" opacity="0.3" filter="blur(16px)" />
+        </svg>
+      )}
+      {/* Left: Text */}
+      <View
+        style={{
+          flex: 1,
+          zIndex: 1,
+          alignItems: isMobile ? 'center' : 'flex-start',
+          justifyContent: 'center',
+          paddingRight: isMobile ? 0 : 32,
+          maxWidth: isMobile ? '100%' : 420,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: isMobile ? 24 : 32,
+            fontWeight: 'bold',
+            color: theme.text,
+            marginBottom: 18,
+            letterSpacing: 0.2,
+            textAlign: isMobile ? 'center' : 'left',
+          }}
+        >About Us</Text>
+        <Text
+          style={{
+            fontSize: isMobile ? 16 : 19,
+            color: theme.secondary,
+            lineHeight: isMobile ? 25 : 30,
+            maxWidth: 420,
+            textAlign: isMobile ? 'center' : 'left',
+            marginBottom: 0,
+          }}
+        >
+          Axzora Super App is your ultimate solution for all your daily needs. We connect you with a wide range of services, from shopping and travel to wedding planning and IT solutions. Our mission is to simplify your life by providing seamless, reliable, and efficient services all in one place. Discover a new level of convenience and excellence with Axzora. We are committed to delivering top-notch service and building lasting relationships with our users. Welcome to the future of convenience!
+        </Text>
+      </View>
+      {/* Right: Illustration */}
+      <View
+        style={{
+          flex: 1,
+          zIndex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: isMobile ? 32 : 0,
+          width: '100%',
+        }}
+        accessible accessibilityLabel="About Us illustration"
+      >
+        <Illustration />
+      </View>
     </Animated.View>
   );
 }
@@ -626,18 +962,7 @@ export default function LandingScreen({ navigation, route }) {
             ))}
           </View>
         </View>
-        <Animated.View style={[styles.sectionAbout, { backgroundColor: theme.card, shadowColor: theme.shadow }, aboutSectionAnimatedStyle]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>About Us</Text>
-          <Text style={[styles.aboutText, { color: theme.secondary }]}>
-            Axzora Super App is your ultimate solution for all your daily needs. 
-            We connect you with a wide range of services, from shopping and travel 
-            to wedding planning and IT solutions. Our mission is to simplify your life 
-            by providing seamless, reliable, and efficient services all in one place.
-            Discover a new level of convenience and excellence with Axzora. 
-            We are committed to delivering top-notch service and building lasting relationships 
-            with our users. Welcome to the future of convenience!
-          </Text>
-        </Animated.View>
+        <AboutUsSection theme={theme} aboutSectionAnimatedStyle={aboutSectionAnimatedStyle} />
         <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
           <Text style={styles.sectionTitle}>How It Works</Text>
           <View style={styles.howItWorksStepsContainer}>
@@ -648,18 +973,7 @@ export default function LandingScreen({ navigation, route }) {
         </Animated.View>
         <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
           <Text style={styles.sectionTitle}>What Our Users Say</Text>
-          <FlatList
-            data={testimonials}
-            renderItem={({ item, index }) => <AnimatedTestimonialCard testimonial={item} index={index} />}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.testimonialsListContainer}
-            snapToInterval={300}
-            decelerationRate="fast"
-            snapToAlignment="start"
-            pagingEnabled
-          />
+          <TestimonialCarousel testimonials={testimonials} />
         </Animated.View>
         <Animated.View style={[styles.sectionCTA, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
           <Text style={styles.ctaHeadline}>Ready to Simplify Your Life?</Text>
@@ -720,9 +1034,46 @@ export default function LandingScreen({ navigation, route }) {
   );
 }
 
-function AnimatedTestimonialCard({ testimonial, index }) {
+function FAQItem({ item, index }) {
+  const [expanded, setExpanded] = useState(false);
   const animatedValue = useRef(new Animated.Value(0)).current;
-  const hoverAnimatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: expanded ? 1 : 0,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [expanded, animatedValue]);
+
+  const arrowRotation = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const heightInterpolate = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 200],
+  });
+
+  return (
+    <Animated.View style={[styles.faqItemContainer]}>
+      <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.faqQuestionContainer}>
+        <Text style={styles.faqQuestionText}>{item.question}</Text>
+        <Animated.Text style={{ transform: [{ rotate: arrowRotation }], fontSize: 20, color: '#007AFF' }}>▼</Animated.Text>
+      </TouchableOpacity>
+      {expanded && (
+        <Animated.View style={{ opacity: animatedValue, height: heightInterpolate, overflow: 'hidden' }}>
+          <Text style={styles.faqAnswerText}>{item.answer}</Text>
+        </Animated.View>
+      )}
+    </Animated.View>
+  );
+}
+
+function AnimatedHowItWorksStep({ step, index }) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(animatedValue, {
@@ -730,31 +1081,11 @@ function AnimatedTestimonialCard({ testimonial, index }) {
       friction: 8,
       tension: 100,
       useNativeDriver: true,
-      delay: index * 100,
+      delay: index * 150,
     }).start();
   }, [animatedValue, index]);
 
-  const handleMouseEnter = () => {
-    if (Platform.OS === 'web') {
-      Animated.timing(hoverAnimatedValue, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (Platform.OS === 'web') {
-      Animated.timing(hoverAnimatedValue, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
-
-  const cardStyle = {
+  const stepStyle = {
     opacity: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 1],
@@ -763,63 +1094,64 @@ function AnimatedTestimonialCard({ testimonial, index }) {
       {
         translateY: animatedValue.interpolate({
           inputRange: [0, 1],
-          outputRange: [50, 0],
+          outputRange: [30, 0],
         }),
       },
       {
         scale: animatedValue.interpolate({
           inputRange: [0, 1],
-          outputRange: [0.8, 1],
+          outputRange: [0.9, 1],
         }),
       },
-      Platform.OS === 'web' && {
-        scale: hoverAnimatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.03],
-        }),
-      },
-    ].filter(Boolean),
-    ...Platform.select({
-      web: {
-        shadowColor: hoverAnimatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['#007AFF', '#007AFF'],
-        }),
-        shadowOpacity: hoverAnimatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.09, 0.2],
-        }),
-        shadowRadius: hoverAnimatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [10, 18],
-        }),
-        shadowOffset: {
-          width: hoverAnimatedValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 0],
-          }),
-          height: hoverAnimatedValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [2, 8],
-          }),
-        },
-        transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
-        willChange: 'transform, box-shadow',
-      },
-    }),
+    ],
   };
 
   return (
-    <Animated.View style={[styles.testimonialCard, cardStyle]}>
-      <TouchableOpacity
-        activeOpacity={0.92}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <Text style={styles.testimonialQuote}>\" {testimonial.quote} \"</Text>
-        <Text style={styles.testimonialAuthor}>- {testimonial.author}</Text>
-        <Text style={styles.testimonialRole}>{testimonial.role}</Text>
-      </TouchableOpacity>
+    <Animated.View style={[styles.howItWorksStep, stepStyle]}>
+      <Text style={styles.stepNumber}>{step.number}</Text>
+      <Text style={styles.stepTitle}>{step.title}</Text>
+      <Text style={styles.stepDescription}>{step.description}</Text>
+    </Animated.View>
+  );
+}
+
+function AnimatedPartnerLogo({ partner, index }) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true,
+      delay: index * 120,
+    }).start();
+  }, [animatedValue, index]);
+
+  const logoStyle = {
+    opacity: animatedValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    }),
+    transform: [
+      {
+        translateY: animatedValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [30, 0],
+        }),
+      },
+      {
+        scale: animatedValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.9, 1],
+        }),
+      },
+    ],
+  };
+
+  return (
+    <Animated.View style={[styles.partnerLogoContainer, logoStyle]}>
+      <Text style={styles.partnerLogoText}>{partner.name}</Text>
     </Animated.View>
   );
 }
@@ -1216,6 +1548,7 @@ const styles = StyleSheet.create({
   testimonialsListContainer: {
     paddingHorizontal: 12,
     paddingBottom: 20,
+    paddingRight: 32,
   },
   testimonialCard: {
     width: 280,
@@ -1228,7 +1561,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
-    justifyContent: 'space-between',
   },
   testimonialQuote: {
     fontSize: 16,
@@ -1365,126 +1697,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 6,
   },
-});
-
-function FAQItem({ item, index }) {
-  const [expanded, setExpanded] = useState(false);
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(animatedValue, {
-      toValue: expanded ? 1 : 0,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: true,
-    }).start();
-  }, [expanded, animatedValue]);
-
-  const arrowRotation = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  const heightInterpolate = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 200],
-  });
-
-  return (
-    <Animated.View style={[styles.faqItemContainer]}>
-      <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.faqQuestionContainer}>
-        <Text style={styles.faqQuestionText}>{item.question}</Text>
-        <Animated.Text style={{ transform: [{ rotate: arrowRotation }], fontSize: 20, color: '#007AFF' }}>▼</Animated.Text>
-      </TouchableOpacity>
-      {expanded && (
-        <Animated.View style={{ opacity: animatedValue, height: heightInterpolate, overflow: 'hidden' }}>
-          <Text style={styles.faqAnswerText}>{item.answer}</Text>
-        </Animated.View>
-      )}
-    </Animated.View>
-  );
-}
-
-function AnimatedHowItWorksStep({ step, index }) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(animatedValue, {
-      toValue: 1,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: true,
-      delay: index * 150,
-    }).start();
-  }, [animatedValue, index]);
-
-  const stepStyle = {
-    opacity: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    }),
-    transform: [
-      {
-        translateY: animatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [30, 0],
-        }),
-      },
-      {
-        scale: animatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.9, 1],
-        }),
-      },
-    ],
-  };
-
-  return (
-    <Animated.View style={[styles.howItWorksStep, stepStyle]}>
-      <Text style={styles.stepNumber}>{step.number}</Text>
-      <Text style={styles.stepTitle}>{step.title}</Text>
-      <Text style={styles.stepDescription}>{step.description}</Text>
-    </Animated.View>
-  );
-}
-
-function AnimatedPartnerLogo({ partner, index }) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(animatedValue, {
-      toValue: 1,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: true,
-      delay: index * 120,
-    }).start();
-  }, [animatedValue, index]);
-
-  const logoStyle = {
-    opacity: animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    }),
-    transform: [
-      {
-        translateY: animatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [30, 0],
-        }),
-      },
-      {
-        scale: animatedValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.9, 1],
-        }),
-      },
-    ],
-  };
-
-  return (
-    <Animated.View style={[styles.partnerLogoContainer, logoStyle]}>
-      <Text style={styles.partnerLogoText}>{partner.name}</Text>
-    </Animated.View>
-  );
-} 
+}); 

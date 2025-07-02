@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }) {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const { updateAuthData } = useUser();
+  const { updateAuthData, getValidAccessToken } = useUser();
 
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
@@ -54,7 +54,9 @@ export default function LoginScreen({ navigation }) {
         await updateAuthData(
           data.user?.email || email || null,
           data.user?.id || null,
-          data.access_token
+          data.access_token,
+          data.expires_at,
+          data.refresh_token
         );
       } else {
         if (data.error_code === 'invalid_credentials' || data.msg === 'Invalid login credentials') {
@@ -103,6 +105,15 @@ export default function LoginScreen({ navigation }) {
     } finally {
       setIsSigningUp(false);
     }
+  };
+
+  const fetchWallet = async () => {
+    const token = await getValidAccessToken();
+    if (!token) return; // User is logged out
+    const res = await fetch('YOUR_API', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // ...handle response
   };
 
   return (

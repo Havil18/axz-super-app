@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Animated, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Animated, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { useUser } from '../contexts/UserContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -10,51 +10,16 @@ export default function Navbar({ navigation }) {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState('');
   const [walletInfo, setWalletInfo] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState('');
+  const [sortLatest, setSortLatest] = useState(false);
   const fadeAnim = new Animated.Value(0);
   const menuAnim = new Animated.Value(0);
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
   const { userEmail, userId, accessToken, logout } = useUser();
   const { theme, toggleTheme } = useTheme();
-
-  // Add mock transactions data
-  const mockTransactions = [
-    {
-      id: 'txn1',
-      date: '2024-06-01',
-      description: 'Coffee Shop',
-      amount: -4.50,
-      type: 'debit',
-    },
-    {
-      id: 'txn2',
-      date: '2024-05-30',
-      description: 'Salary',
-      amount: 1200.00,
-      type: 'credit',
-    },
-    {
-      id: 'txn3',
-      date: '2024-05-28',
-      description: 'Grocery Store',
-      amount: -56.20,
-      type: 'debit',
-    },
-    {
-      id: 'txn4',
-      date: '2024-05-25',
-      description: 'Transfer from John',
-      amount: 200.00,
-      type: 'credit',
-    },
-    {
-      id: 'txn5',
-      date: '2024-05-22',
-      description: 'Online Shopping',
-      amount: -89.99,
-      type: 'debit',
-    },
-  ];
 
   useEffect(() => {
     if (modalVisible) {
@@ -93,6 +58,9 @@ export default function Navbar({ navigation }) {
       setWalletLoading(true);
       setWalletError('');
       setWalletInfo(null);
+      setTransactions([]);
+      setTransactionsLoading(true);
+      setTransactionsError('');
       fetch(`https://zygpupmeradizrachnqj.supabase.co/rest/v1/wallets?user_id=eq.${userId}&is_active=eq.true`, {
         method: 'GET',
         headers: {
@@ -111,12 +79,60 @@ export default function Navbar({ navigation }) {
         })
         .catch(() => setWalletError('Failed to fetch wallet info.'))
         .finally(() => setWalletLoading(false));
+      fetch(`https://zygpupmeradizrachnqj.supabase.co/rest/v1/transactions?user_id=eq.${userId}`, {
+        method: 'GET',
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5Z3B1cG1lcmFkaXpyYWNobnFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMDkwMDMsImV4cCI6MjA2Mjg4NTAwM30.u6cJkMkw17DSmapGl3dgG7NPOh5--PPnRHr8ZWy6WXo',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTransactions(data);
+          } else {
+            setTransactionsError('Failed to fetch transactions.');
+          }
+        })
+        .catch(() => setTransactionsError('Failed to fetch transactions.'))
+        .finally(() => setTransactionsLoading(false));
+      setSortLatest(false);
     }
   }, [walletModalVisible, userId, accessToken]);
 
   const handleLogout = async () => {
     await logout();
     // No need to navigate - the Navigation component will handle it
+  };
+
+  const handleSortToggle = () => {
+    setTransactionsLoading(true);
+    setTransactionsError('');
+    let url = `https://zygpupmeradizrachnqj.supabase.co/rest/v1/transactions?user_id=eq.${userId}`;
+    let nextSortLatest = !sortLatest;
+    if (nextSortLatest) {
+      url = `https://zygpupmeradizrachnqj.supabase.co/rest/v1/transactions?user_id=eq.${userId}&order=created_at.desc`;
+    }
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5Z3B1cG1lcmFkaXpyYWNobnFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMDkwMDMsImV4cCI6MjA2Mjg4NTAwM30.u6cJkMkw17DSmapGl3dgG7NPOh5--PPnRHr8ZWy6WXo',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setTransactions(data);
+          setSortLatest(nextSortLatest);
+        } else {
+          setTransactionsError('Failed to fetch transactions.');
+        }
+      })
+      .catch(() => setTransactionsError('Failed to fetch transactions.'))
+      .finally(() => setTransactionsLoading(false));
   };
 
   const renderMobileMenu = () => {
@@ -255,37 +271,77 @@ export default function Navbar({ navigation }) {
                     {walletInfo.status === 'active' ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
+                {/* Sort Button */}
+                <View style={{ width: '100%', alignItems: 'flex-end', paddingRight: 16, marginBottom: 4 }}>
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#007AFF', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 16 }}
+                    onPress={handleSortToggle}
+                    disabled={transactionsLoading}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                      {sortLatest ? 'Sort by Oldest' : 'Sort by Latest'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 {/* Transactions Table - Redesigned */}
                 <View style={{ width: '100%', backgroundColor: theme.card, borderRadius: 16, padding: 0, boxShadow: '0 2px 8px #0001', marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#f2f2f2' }}>
                   <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 0, color: theme.text, padding: 16, paddingBottom: 8 }}>Recent Transactions</Text>
-                  {mockTransactions.length === 0 ? (
+                  {transactionsLoading ? (
+                    <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 16 }} />
+                  ) : transactionsError ? (
+                    <Text style={{ color: 'red', textAlign: 'center', marginVertical: 16 }}>{transactionsError}</Text>
+                  ) : transactions.length === 0 ? (
                     <Text style={{ color: theme.secondary, textAlign: 'center', marginVertical: 16 }}>No transactions found.</Text>
                   ) : (
-                    <View style={{ maxHeight: 240 }}>
-                      {mockTransactions.map((txn, idx) => (
-                        <View key={txn.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: idx % 2 === 0 ? '#fafbfc' : '#fff', borderBottomWidth: idx === mockTransactions.length - 1 ? 0 : 1, borderBottomColor: '#f2f2f2' }}>
-                          {/* Icon */}
-                          <View style={{ width: 32, alignItems: 'center', marginRight: 10 }}>
-                            {txn.type === 'credit' ? (
-                              <Text style={{ fontSize: 18, color: 'green' }}>↑</Text>
-                            ) : (
-                              <Text style={{ fontSize: 18, color: 'red' }}>↓</Text>
-                            )}
+                    <ScrollView style={{ maxHeight: 320 }}>
+                      {transactions.map((txn, idx) => {
+                        // Determine credit or debit
+                        const isCredit =
+                          txn.transaction_type === 'transfer_in' ||
+                          txn.transaction_type === 'credit' ||
+                          txn.transaction_type === 'deposit';
+                        const isDebit =
+                          txn.transaction_type === 'transfer_out' ||
+                          txn.transaction_type === 'debit' ||
+                          txn.transaction_type === 'withdrawal';
+                        return (
+                          <View
+                            key={txn.id}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 14,
+                              paddingHorizontal: 16,
+                              backgroundColor: idx % 2 === 0 ? '#fafbfc' : '#fff',
+                              borderBottomWidth: idx === transactions.length - 1 ? 0 : 1,
+                              borderBottomColor: '#f2f2f2',
+                            }}
+                          >
+                            {/* Icon */}
+                            <View style={{ width: 32, alignItems: 'center', marginRight: 10 }}>
+                              {isCredit ? (
+                                <Text style={{ fontSize: 18, color: 'green' }}>↑</Text>
+                              ) : (
+                                <Text style={{ fontSize: 18, color: 'red' }}>↓</Text>
+                              )}
+                            </View>
+                            {/* Date & Description */}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, color: theme.text, fontWeight: 'bold' }}>{txn.description}</Text>
+                              <Text style={{ fontSize: 12, color: theme.secondary }}>
+                                {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : ''}
+                              </Text>
+                            </View>
+                            {/* Amount */}
+                            <View style={{ minWidth: 90, alignItems: 'flex-end' }}>
+                              <Text style={{ fontWeight: 'bold', fontSize: 15, color: isCredit ? 'green' : 'red' }}>
+                                {isCredit ? '+' : '-'}<Text style={{ color: '#FFB300', fontWeight: 'bold' }}>HC</Text>{Math.abs(txn.amount).toFixed(2)}
+                              </Text>
+                            </View>
                           </View>
-                          {/* Date & Description */}
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 14, color: theme.text, fontWeight: 'bold' }}>{txn.description}</Text>
-                            <Text style={{ fontSize: 12, color: theme.secondary }}>{txn.date}</Text>
-                          </View>
-                          {/* Amount */}
-                          <View style={{ minWidth: 90, alignItems: 'flex-end' }}>
-                            <Text style={{ fontWeight: 'bold', fontSize: 15, color: txn.type === 'credit' ? 'green' : 'red' }}>
-                              {txn.type === 'credit' ? '+' : '-'}<Text style={{ color: '#FFB300', fontWeight: 'bold' }}>HC</Text>{Math.abs(txn.amount).toFixed(2)}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
+                        );
+                      })}
+                    </ScrollView>
                   )}
                 </View>
               </View>
@@ -486,10 +542,10 @@ const styles = StyleSheet.create({
   },
   walletModalModernContent: {
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    maxWidth: 400,
+    padding: 28,
+    borderRadius: 16,
+    width: '95%',
+    maxWidth: 540,
     alignItems: 'center',
   },
   walletHeader: {
