@@ -8,6 +8,8 @@ import Services from './components/Services';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import Blog from './components/Blog';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/ToastContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -55,10 +57,14 @@ function Navigation() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <UserProvider>
-        <Navigation />
-      </UserProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <ThemeProvider>
+          <UserProvider>
+            <Navigation />
+          </UserProvider>
+        </ThemeProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 } 

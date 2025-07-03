@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, Animated, Dimensions, TouchableOpacity, Easing } from 'react-native';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useTheme } from '../contexts/ThemeContext';
@@ -65,8 +65,14 @@ const blogs = [
   },
 ];
 
-function AnimatedHero({ theme }) {
+function AnimatedHero({ theme, onCTAPress }) {
   const gradientAnim = useRef(new Animated.Value(0)).current;
+  // Parallax values for floating shapes
+  const parallax1 = useRef(new Animated.Value(0)).current;
+  const parallax2 = useRef(new Animated.Value(0)).current;
+  const parallax3 = useRef(new Animated.Value(0)).current;
+  // CTA button animation
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -75,6 +81,29 @@ function AnimatedHero({ theme }) {
         Animated.timing(gradientAnim, { toValue: 0, duration: 4000, useNativeDriver: false }),
       ])
     ).start();
+    // Parallax floating shapes
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax1, { toValue: 1, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax1, { toValue: 0, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax2, { toValue: 1, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax2, { toValue: 0, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax3, { toValue: 1, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax3, { toValue: 0, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    // CTA bounce on mount
+    Animated.spring(ctaScale, { toValue: 1.08, friction: 2, tension: 80, useNativeDriver: true }).start(() => {
+      Animated.spring(ctaScale, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
+    });
   }, []);
 
   const bgColor = gradientAnim.interpolate({
@@ -82,15 +111,135 @@ function AnimatedHero({ theme }) {
     outputRange: [theme.primary, theme.accent]
   });
 
+  // Parallax transforms
+  const shape1Style = {
+    top: 30,
+    left: 60,
+    opacity: 0.15,
+    backgroundColor: '#fff',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    transform: [
+      { translateY: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 24] }) },
+      { translateX: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) },
+    ],
+  };
+  const shape2Style = {
+    top: 100,
+    right: 80,
+    opacity: 0.10,
+    backgroundColor: '#FFD93D',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    transform: [
+      { translateY: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, -18] }) },
+      { translateX: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, 16] }) },
+    ],
+  };
+  const shape3Style = {
+    bottom: 40,
+    left: 120,
+    opacity: 0.10,
+    backgroundColor: '#E91E63',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    transform: [
+      { translateY: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }) },
+      { translateX: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, -14] }) },
+    ],
+  };
+
+  // CTA button handlers
+  const handleCTAPressIn = () => {
+    Animated.spring(ctaScale, { toValue: 0.96, useNativeDriver: true }).start();
+  };
+  const handleCTAPressOut = () => {
+    Animated.spring(ctaScale, { toValue: 1.08, friction: 2, tension: 80, useNativeDriver: true }).start(() => {
+      Animated.spring(ctaScale, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
+    });
+  };
+  const handleCTAMouseEnter = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1.06, useNativeDriver: true }).start();
+    }
+  };
+  const handleCTAMouseLeave = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1, useNativeDriver: true }).start();
+    }
+  };
+
   return (
     <Animated.View style={[styles.heroSection, { backgroundColor: bgColor }]}> 
-      <Animated.View style={[styles.heroFloatingShape, { top: 30, left: 60, opacity: 0.15, backgroundColor: '#fff', width: 120, height: 120, borderRadius: 60 }]} />
-      <Animated.View style={[styles.heroFloatingShape, { top: 100, right: 80, opacity: 0.10, backgroundColor: '#FFD93D', width: 180, height: 180, borderRadius: 90 }]} />
-      <Animated.View style={[styles.heroFloatingShape, { bottom: 40, left: 120, opacity: 0.10, backgroundColor: '#E91E63', width: 100, height: 100, borderRadius: 50 }]} />
+      <Animated.View style={[styles.heroFloatingShape, shape1Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape2Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape3Style]} />
       <View style={styles.heroContent}>
         <Text style={styles.heroTitle}>Welcome to the Axzora Blog</Text>
-        <Text style={styles.heroSubtitle}>Insights, tips, and stories to inspire your journey. Explore our latest articles and discover what\'s new!</Text>
+        <Text style={styles.heroSubtitle}>Insights, tips, and stories to inspire your journey. Explore our latest articles and discover what's new!</Text>
+        <Animated.View style={{ marginTop: 24, transform: [{ scale: ctaScale }] }}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.85}
+            onPressIn={handleCTAPressIn}
+            onPressOut={handleCTAPressOut}
+            {...(Platform.OS === 'web' ? { onMouseEnter: handleCTAMouseEnter, onMouseLeave: handleCTAMouseLeave } : {})}
+            onPress={onCTAPress}
+          >
+            <Text style={styles.ctaButtonText}>Read Latest Articles</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
+    </Animated.View>
+  );
+}
+
+function AnimatedBlogCard({ blog, theme, delay }) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const hoverAnimatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true,
+      delay,
+    }).start();
+  }, [animatedValue, delay]);
+
+  const cardStyle = {
+    opacity: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+    transform: [
+      { translateY: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) },
+      { scale: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+      Platform.OS === 'web' && { scale: hoverAnimatedValue.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) },
+    ].filter(Boolean),
+  };
+
+  const handleMouseEnter = () => {
+    if (Platform.OS === 'web') {
+      Animated.timing(hoverAnimatedValue, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+  const handleMouseLeave = () => {
+    if (Platform.OS === 'web') {
+      Animated.timing(hoverAnimatedValue, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+
+  return (
+    <Animated.View
+      style={[styles.blogCard, cardStyle, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+      {...(Platform.OS === 'web' ? { onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave } : {})}
+    >
+      <Text style={[styles.blogTitle, { color: theme.text }]}>{blog.title}</Text>
+      <Text style={[styles.blogMeta, { color: theme.secondary }]}>{blog.author} • {blog.date}</Text>
+      <Text style={[styles.blogSummary, { color: theme.text }]}>{blog.summary}</Text>
+      <Text style={[styles.blogContent, { color: theme.secondary }]}>{blog.content}</Text>
     </Animated.View>
   );
 }
@@ -104,13 +253,8 @@ export default function Blog({ navigation }) {
         <AnimatedHero theme={theme} />
         <Text style={[styles.pageTitle, { color: theme.primary }]}>Axzora Blog</Text>
         <View style={styles.blogList}>
-          {blogs.map(blog => (
-            <View key={blog.id} style={[styles.blogCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}> 
-              <Text style={[styles.blogTitle, { color: theme.text }]}>{blog.title}</Text>
-              <Text style={[styles.blogMeta, { color: theme.secondary }]}>{blog.author} • {blog.date}</Text>
-              <Text style={[styles.blogSummary, { color: theme.text }]}>{blog.summary}</Text>
-              <Text style={[styles.blogContent, { color: theme.secondary }]}>{blog.content}</Text>
-            </View>
+          {blogs.map((blog, index) => (
+            <AnimatedBlogCard key={blog.id} blog={blog} theme={theme} delay={index * 100} />
           ))}
         </View>
         <View style={styles.footerWrapper}>
@@ -213,5 +357,16 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: 0.2,
     maxWidth: 600,
+  },
+  ctaButton: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  ctaButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007aff',
   },
 }); 

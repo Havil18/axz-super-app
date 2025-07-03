@@ -295,7 +295,6 @@ export default function Navbar({ navigation }) {
                   ) : (
                     <ScrollView style={{ maxHeight: 320 }}>
                       {transactions.map((txn, idx) => {
-                        // Determine credit or debit
                         const isCredit =
                           txn.transaction_type === 'transfer_in' ||
                           txn.transaction_type === 'credit' ||
@@ -310,31 +309,37 @@ export default function Navbar({ navigation }) {
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              paddingVertical: 14,
-                              paddingHorizontal: 16,
-                              backgroundColor: idx % 2 === 0 ? '#fafbfc' : '#fff',
+                              paddingVertical: 16,
+                              paddingHorizontal: 20,
+                              backgroundColor: idx % 2 === 0 ? '#f4f8fb' : '#fff',
                               borderBottomWidth: idx === transactions.length - 1 ? 0 : 1,
-                              borderBottomColor: '#f2f2f2',
+                              borderBottomColor: '#e3eaf2',
+                              borderRadius: idx === 0 ? 12 : 0,
+                              ...Platform.select({ web: { transition: 'background 0.2s' } }),
                             }}
+                            {...(Platform.OS === 'web' ? {
+                              onMouseEnter: e => e.currentTarget.style.backgroundColor = '#e0f2fe',
+                              onMouseLeave: e => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#f4f8fb' : '#fff',
+                            } : {})}
                           >
                             {/* Icon */}
-                            <View style={{ width: 32, alignItems: 'center', marginRight: 10 }}>
+                            <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
                               {isCredit ? (
-                                <Text style={{ fontSize: 18, color: 'green' }}>↑</Text>
+                                <Text style={{ fontSize: 20, color: 'green', fontWeight: 'bold' }}>↑</Text>
                               ) : (
-                                <Text style={{ fontSize: 18, color: 'red' }}>↓</Text>
+                                <Text style={{ fontSize: 20, color: 'red', fontWeight: 'bold' }}>↓</Text>
                               )}
                             </View>
                             {/* Date & Description */}
                             <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 14, color: theme.text, fontWeight: 'bold' }}>{txn.description}</Text>
-                              <Text style={{ fontSize: 12, color: theme.secondary }}>
+                              <Text style={{ fontSize: 15, color: theme.text, fontWeight: 'bold', marginBottom: 2, letterSpacing: 0.1 }}>{txn.description}</Text>
+                              <Text style={{ fontSize: 12, color: theme.secondary, letterSpacing: 0.1 }}>
                                 {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : ''}
                               </Text>
                             </View>
                             {/* Amount */}
                             <View style={{ minWidth: 90, alignItems: 'flex-end' }}>
-                              <Text style={{ fontWeight: 'bold', fontSize: 15, color: isCredit ? 'green' : 'red' }}>
+                              <Text style={{ fontWeight: 'bold', fontSize: 16, color: isCredit ? 'green' : 'red', letterSpacing: 0.1 }}>
                                 {isCredit ? '+' : '-'}<Text style={{ color: '#FFB300', fontWeight: 'bold' }}>HC</Text>{Math.abs(txn.amount).toFixed(2)}
                               </Text>
                             </View>
@@ -375,6 +380,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    ...Platform.select({ web: { boxShadow: '0 2px 12px #007aff11', transition: 'box-shadow 0.25s' } }),
   },
   logoContainer: {
     alignItems: 'flex-start',
@@ -401,34 +407,42 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     marginHorizontal: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.25s, color 0.25s' } }),
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, color 0.18s',
+      ':hover': { backgroundColor: '#e0f2fe' },
+      ':focus': { outline: '2px solid #007AFF', outlineOffset: 2 },
+      ':active': { backgroundColor: '#bae6fd' },
+    } }),
   },
   linkText: {
     fontSize: 17,
     color: '#23272f',
     fontWeight: '500',
     letterSpacing: 0.2,
-    ...Platform.select({ web: { transition: 'color 0.25s' } }),
+    ...Platform.select({ web: { transition: 'color 0.18s' } }),
   },
   logoutButton: {
     marginLeft: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#FF3B30',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 28,
-    minWidth: 56,
-    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.2s' } }),
+    height: 32,
+    minWidth: 64,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, transform 0.18s',
+      ':hover': { backgroundColor: '#ff6f61' },
+      ':active': { backgroundColor: '#d32f2f' },
+    } }),
   },
   logoutText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 15,
     letterSpacing: 0.2,
   },
   profileIcon: {
@@ -445,35 +459,42 @@ const styles = StyleSheet.create({
     top: 60,
     right: 20,
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
+    padding: 28,
+    borderRadius: 16,
     alignItems: 'center',
-    width: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    width: 320,
+    boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff22' : undefined,
+    ...Platform.select({ web: { transition: 'box-shadow 0.25s' } }),
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 12,
+    color: '#007AFF',
+    letterSpacing: 0.2,
   },
   modalText: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 8,
+    color: '#23272f',
+    letterSpacing: 0.1,
   },
   modalLogoutButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     backgroundColor: '#FF3B30',
-    borderRadius: 5,
+    borderRadius: 10,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, transform 0.18s',
+      ':hover': { backgroundColor: '#ff6f61' },
+      ':active': { backgroundColor: '#d32f2f' },
+    } }),
   },
   modalLogoutText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.2,
   },
   hamburgerButton: {
     padding: 10,
@@ -542,11 +563,13 @@ const styles = StyleSheet.create({
   },
   walletModalModernContent: {
     backgroundColor: '#fff',
-    padding: 28,
-    borderRadius: 16,
+    padding: 32,
+    borderRadius: 20,
     width: '95%',
-    maxWidth: 540,
+    maxWidth: 560,
     alignItems: 'center',
+    boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff22' : undefined,
+    ...Platform.select({ web: { transition: 'box-shadow 0.25s' } }),
   },
   walletHeader: {
     flexDirection: 'row',
@@ -568,15 +591,23 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   walletModernCloseButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
     backgroundColor: '#FF3B30',
-    borderRadius: 5,
+    borderRadius: 12,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.2s, transform 0.2s' } }),
+    shadowColor: '#FF3B30',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   walletModernCloseText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.2,
   },
   themeToggleIcon: { marginRight: 12, padding: 4, borderRadius: 16, backgroundColor: 'transparent' },
 }); 

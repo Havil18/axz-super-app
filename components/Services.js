@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Animated, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Animated, Dimensions, Easing } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -58,8 +58,14 @@ const services = [
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-function AnimatedHero({ theme }) {
+function AnimatedHero({ theme, onCTAPress }) {
   const gradientAnim = useRef(new Animated.Value(0)).current;
+  // Parallax values for floating shapes
+  const parallax1 = useRef(new Animated.Value(0)).current;
+  const parallax2 = useRef(new Animated.Value(0)).current;
+  const parallax3 = useRef(new Animated.Value(0)).current;
+  // CTA button animation
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -68,6 +74,29 @@ function AnimatedHero({ theme }) {
         Animated.timing(gradientAnim, { toValue: 0, duration: 4000, useNativeDriver: false }),
       ])
     ).start();
+    // Parallax floating shapes
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax1, { toValue: 1, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax1, { toValue: 0, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax2, { toValue: 1, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax2, { toValue: 0, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax3, { toValue: 1, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax3, { toValue: 0, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    // CTA bounce on mount
+    Animated.spring(ctaScale, { toValue: 1.08, friction: 2, tension: 80, useNativeDriver: true }).start(() => {
+      Animated.spring(ctaScale, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
+    });
   }, []);
 
   const bgColor = gradientAnim.interpolate({
@@ -75,15 +104,143 @@ function AnimatedHero({ theme }) {
     outputRange: [theme.primary, theme.accent]
   });
 
+  // Parallax transforms
+  const shape1Style = {
+    top: 30,
+    left: 60,
+    opacity: 0.15,
+    backgroundColor: '#fff',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    transform: [
+      { translateY: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 24] }) },
+      { translateX: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) },
+    ],
+  };
+  const shape2Style = {
+    top: 100,
+    right: 80,
+    opacity: 0.10,
+    backgroundColor: '#FFD93D',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    transform: [
+      { translateY: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, -18] }) },
+      { translateX: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, 16] }) },
+    ],
+  };
+  const shape3Style = {
+    bottom: 40,
+    left: 120,
+    opacity: 0.10,
+    backgroundColor: '#E91E63',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    transform: [
+      { translateY: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }) },
+      { translateX: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, -14] }) },
+    ],
+  };
+
+  // CTA button handlers
+  const handleCTAPressIn = () => {
+    Animated.spring(ctaScale, { toValue: 0.96, useNativeDriver: true }).start();
+  };
+  const handleCTAPressOut = () => {
+    Animated.spring(ctaScale, { toValue: 1.08, friction: 2, tension: 80, useNativeDriver: true }).start(() => {
+      Animated.spring(ctaScale, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
+    });
+  };
+  const handleCTAMouseEnter = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1.06, useNativeDriver: true }).start();
+    }
+  };
+  const handleCTAMouseLeave = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1, useNativeDriver: true }).start();
+    }
+  };
+
   return (
     <Animated.View style={[styles.heroSection, { backgroundColor: bgColor }]}> 
-      <Animated.View style={[styles.heroFloatingShape, { top: 30, left: 60, opacity: 0.15, backgroundColor: '#fff', width: 120, height: 120, borderRadius: 60 }]} />
-      <Animated.View style={[styles.heroFloatingShape, { top: 100, right: 80, opacity: 0.10, backgroundColor: '#FFD93D', width: 180, height: 180, borderRadius: 90 }]} />
-      <Animated.View style={[styles.heroFloatingShape, { bottom: 40, left: 120, opacity: 0.10, backgroundColor: '#E91E63', width: 100, height: 100, borderRadius: 50 }]} />
+      <Animated.View style={[styles.heroFloatingShape, shape1Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape2Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape3Style]} />
       <View style={styles.heroContent}>
         <Text style={styles.heroTitle}>Explore Our Services</Text>
         <Text style={styles.heroSubtitle}>Axzora brings you a suite of powerful, integrated services to simplify and enrich your daily life. Discover what we offer below!</Text>
+        <Animated.View style={{ marginTop: 24, transform: [{ scale: ctaScale }] }}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.85}
+            onPressIn={handleCTAPressIn}
+            onPressOut={handleCTAPressOut}
+            {...(Platform.OS === 'web' ? { onMouseEnter: handleCTAMouseEnter, onMouseLeave: handleCTAMouseLeave } : {})}
+            onPress={onCTAPress}
+          >
+            <Text style={styles.ctaButtonText}>Get Started with Axzora</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
+    </Animated.View>
+  );
+}
+
+function AnimatedServiceCard({ service, theme, delay }) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const hoverAnimatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true,
+      delay,
+    }).start();
+  }, [animatedValue, delay]);
+
+  const cardStyle = {
+    opacity: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+    transform: [
+      { translateY: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) },
+      { scale: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+      Platform.OS === 'web' && { scale: hoverAnimatedValue.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) },
+    ].filter(Boolean),
+  };
+
+  const handleMouseEnter = () => {
+    if (Platform.OS === 'web') {
+      Animated.timing(hoverAnimatedValue, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+  const handleMouseLeave = () => {
+    if (Platform.OS === 'web') {
+      Animated.timing(hoverAnimatedValue, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+
+  return (
+    <Animated.View
+      style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, cardStyle]}
+      {...(Platform.OS === 'web' ? { onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave } : {})}
+    >
+      <View style={[styles.icon, { backgroundColor: service.color }]}> 
+        <Text style={styles.iconText}>{service.title.charAt(0)}</Text>
+      </View>
+      <Text style={[styles.serviceTitle, { color: service.color }]}>{service.title}</Text>
+      <Text style={[styles.serviceDescription, { color: theme.text }]}>{service.description}</Text>
+      <Text style={[styles.serviceDetails, { color: theme.secondary }]}>{service.details}</Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: service.color }]}
+        onPress={() => { /* navigation to service main page, empty for now */ }}
+      >
+        <Text style={styles.buttonText}>Go to {service.title}</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
@@ -204,56 +361,102 @@ const styles = StyleSheet.create({
   card: {
     width: 340,
     maxWidth: 340,
-    borderRadius: 18,
-    padding: 24,
-    marginBottom: 28,
+    borderRadius: 20,
+    padding: 28,
+    marginBottom: 32,
     alignItems: 'center',
     shadowColor: '#007AFF',
-    shadowOpacity: 0.09,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-    ...Platform.select({ web: { boxShadow: '0 4px 16px #007aff11' } }),
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+    backgroundColor: '#fff',
+    ...Platform.select({ web: { boxShadow: '0 8px 32px #007aff18', transition: 'box-shadow 0.25s, transform 0.18s',
+      ':hover': { boxShadow: '0 12px 40px #007aff22', transform: 'translateY(-4px) scale(1.03)' },
+      ':focus': { outline: '2px solid #007AFF', outlineOffset: 2 },
+      ':active': { boxShadow: '0 4px 16px #007aff11', transform: 'scale(0.98)' },
+    } }),
   },
   icon: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 14,
+    backgroundColor: '#e0f2fe',
+    ...Platform.select({ web: { transition: 'background 0.18s, transform 0.18s' } }),
   },
   iconText: {
-    color: '#fff',
+    fontSize: 28,
     fontWeight: 'bold',
-    fontSize: 26,
+    color: '#fff',
+    letterSpacing: 0.2,
   },
   serviceTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  serviceDescription: {
-    fontSize: 16,
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  serviceDescription: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
   },
   serviceDetails: {
-    fontSize: 15,
-    marginBottom: 18,
+    fontSize: 14,
+    color: '#888',
     textAlign: 'center',
+    marginBottom: 18,
   },
   button: {
-    paddingHorizontal: 24,
+    marginTop: 10,
     paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, transform 0.18s',
+      ':hover': { backgroundColor: '#005ecb', transform: 'scale(1.04)' },
+      ':active': { backgroundColor: '#003e7e', transform: 'scale(0.97)' },
+    } }),
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 16,
+    letterSpacing: 0.2,
+  },
+  ctaButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, transform 0.18s',
+      ':hover': { backgroundColor: '#005ecb', transform: 'scale(1.04)' },
+      ':active': { backgroundColor: '#003e7e', transform: 'scale(0.97)' },
+    } }),
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  ctaButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
     letterSpacing: 0.2,
   },
 }); 

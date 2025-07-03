@@ -201,6 +201,12 @@ function AnimatedHero({ theme }) {
   const gradientAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
+  // Parallax values for floating shapes
+  const parallax1 = useRef(new Animated.Value(0)).current;
+  const parallax2 = useRef(new Animated.Value(0)).current;
+  const parallax3 = useRef(new Animated.Value(0)).current;
+  // CTA button hover/tap animation
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -213,6 +219,25 @@ function AnimatedHero({ theme }) {
       Animated.spring(pulseAnim, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
     });
     Animated.timing(headlineAnim, { toValue: 1, duration: 900, useNativeDriver: true, easing: Easing.out(Easing.exp) }).start();
+    // Parallax floating shapes
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax1, { toValue: 1, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax1, { toValue: 0, duration: 9000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax2, { toValue: 1, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax2, { toValue: 0, duration: 12000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(parallax3, { toValue: 1, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(parallax3, { toValue: 0, duration: 10000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])
+    ).start();
   }, []);
 
   const bgColor = gradientAnim.interpolate({
@@ -220,16 +245,80 @@ function AnimatedHero({ theme }) {
     outputRange: ['#007AFF', '#00B894']
   });
 
+  // Parallax transforms
+  const shape1Style = {
+    top: 40,
+    left: 60,
+    opacity: 0.18,
+    transform: [
+      { scale: gradientAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) },
+      { translateY: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 24] }) },
+      { translateX: parallax1.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) },
+    ],
+  };
+  const shape2Style = {
+    top: 120,
+    right: 80,
+    opacity: 0.13,
+    backgroundColor: '#FFD93D',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    transform: [
+      { translateY: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, -18] }) },
+      { translateX: parallax2.interpolate({ inputRange: [0, 1], outputRange: [0, 16] }) },
+    ],
+  };
+  const shape3Style = {
+    bottom: 60,
+    left: 120,
+    opacity: 0.10,
+    backgroundColor: '#E91E63',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    transform: [
+      { translateY: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }) },
+      { translateX: parallax3.interpolate({ inputRange: [0, 1], outputRange: [0, -14] }) },
+    ],
+  };
+
+  // CTA button handlers
+  const handleCTAPressIn = () => {
+    Animated.spring(ctaScale, { toValue: 0.96, useNativeDriver: true }).start();
+  };
+  const handleCTAPressOut = () => {
+    Animated.spring(ctaScale, { toValue: 1.08, friction: 2, tension: 80, useNativeDriver: true }).start(() => {
+      Animated.spring(ctaScale, { toValue: 1, friction: 2, tension: 80, useNativeDriver: true }).start();
+    });
+  };
+  const handleCTAMouseEnter = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1.06, useNativeDriver: true }).start();
+    }
+  };
+  const handleCTAMouseLeave = () => {
+    if (Platform.OS === 'web') {
+      Animated.spring(ctaScale, { toValue: 1, useNativeDriver: true }).start();
+    }
+  };
+
   return (
-    <Animated.View style={[styles.heroContainer, { backgroundColor: bgColor }]}> 
-      <Animated.View style={[styles.heroFloatingShape, { top: 40, left: 60, opacity: 0.18, transform: [{ scale: gradientAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] }]} />
-      <Animated.View style={[styles.heroFloatingShape, { top: 120, right: 80, opacity: 0.13, backgroundColor: '#FFD93D', width: 180, height: 180, borderRadius: 90 }]} />
-      <Animated.View style={[styles.heroFloatingShape, { bottom: 60, left: 120, opacity: 0.10, backgroundColor: '#E91E63', width: 120, height: 120, borderRadius: 60 }]} />
+    <Animated.View style={[styles.heroSection, { backgroundColor: bgColor }]}> 
+      <Animated.View style={[styles.heroFloatingShape, shape1Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape2Style]} />
+      <Animated.View style={[styles.heroFloatingShape, shape3Style]} />
       <Animated.View style={[styles.heroContent, { opacity: headlineAnim, transform: [{ translateY: headlineAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}> 
-        <Animated.Text style={[styles.heroHeadline, { transform: [{ scale: pulseAnim }] }]}>Innovate with Axzora.</Animated.Text>
-        <Text style={styles.heroSubheadline}>Your all-in-one super app for modern living.</Text>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
+        <Animated.Text style={[styles.heroTitle, { transform: [{ scale: pulseAnim }] }]}>Innovate with Axzora.</Animated.Text>
+        <Text style={styles.heroSubtitle}>Your all-in-one super app for modern living.</Text>
+        <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.85}
+            onPressIn={handleCTAPressIn}
+            onPressOut={handleCTAPressOut}
+            {...(Platform.OS === 'web' ? { onMouseEnter: handleCTAMouseEnter, onMouseLeave: handleCTAMouseLeave } : {})}
+          >
             <Text style={styles.ctaButtonText}>Get Started</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -460,7 +549,7 @@ function AboutUsSection({ theme, aboutSectionAnimatedStyle }) {
       viewBox="0 0 800 600"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ width: '100%', height: isMobile ? 180 : 260, maxWidth: 400, borderRadius: 24, boxShadow: Platform.OS === 'web' ? '0 4px 24px #007aff18' : undefined, background: 'transparent' }}
+      style={{ width: '100%', height: isMobile ? 180 : 260, maxWidth: 400, borderRadius: 32, boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff18' : undefined, background: 'transparent', filter: Platform.OS === 'web' ? 'drop-shadow(0 4px 24px #007aff18)' : undefined }}
       aria-label="People collaborating illustration"
     >
       <rect width="800" height="600" fill="none" />
@@ -498,15 +587,15 @@ function AboutUsSection({ theme, aboutSectionAnimatedStyle }) {
         aboutSectionAnimatedStyle,
         {
           backgroundColor: '#f9fbfd',
-          borderRadius: 24,
+          borderRadius: 32,
           margin: 16,
-          padding: isMobile ? 20 : 40,
-          boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff18' : undefined,
+          padding: isMobile ? 28 : 56,
+          boxShadow: Platform.OS === 'web' ? '0 12px 40px #007aff18' : undefined,
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: 'center',
           position: 'relative',
           overflow: 'hidden',
-          minHeight: 320,
+          minHeight: 340,
         },
       ]}
       accessible accessibilityLabel="About Us section"
@@ -529,28 +618,36 @@ function AboutUsSection({ theme, aboutSectionAnimatedStyle }) {
           zIndex: 1,
           alignItems: isMobile ? 'center' : 'flex-start',
           justifyContent: 'center',
-          paddingRight: isMobile ? 0 : 32,
-          maxWidth: isMobile ? '100%' : 420,
+          paddingRight: isMobile ? 0 : 40,
+          maxWidth: isMobile ? '100%' : 480,
         }}
       >
         <Text
           style={{
-            fontSize: isMobile ? 24 : 32,
+            fontSize: isMobile ? 28 : 38,
             fontWeight: 'bold',
             color: theme.text,
-            marginBottom: 18,
-            letterSpacing: 0.2,
+            marginBottom: 22,
+            letterSpacing: 0.3,
             textAlign: isMobile ? 'center' : 'left',
+            lineHeight: isMobile ? 36 : 48,
+            textShadowColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.04)' : undefined,
+            textShadowOffset: Platform.OS === 'web' ? { width: 0, height: 2 } : undefined,
+            textShadowRadius: Platform.OS === 'web' ? 8 : undefined,
+            ...Platform.select({ web: { transition: 'color 0.18s' } }),
           }}
         >About Us</Text>
         <Text
           style={{
-            fontSize: isMobile ? 16 : 19,
+            fontSize: isMobile ? 17 : 21,
             color: theme.secondary,
-            lineHeight: isMobile ? 25 : 30,
-            maxWidth: 420,
+            lineHeight: isMobile ? 27 : 34,
+            maxWidth: 480,
             textAlign: isMobile ? 'center' : 'left',
             marginBottom: 0,
+            letterSpacing: 0.1,
+            opacity: 0.92,
+            ...Platform.select({ web: { transition: 'color 0.18s' } }),
           }}
         >
           Axzora Super App is your ultimate solution for all your daily needs. We connect you with a wide range of services, from shopping and travel to wedding planning and IT solutions. Our mission is to simplify your life by providing seamless, reliable, and efficient services all in one place. Discover a new level of convenience and excellence with Axzora. We are committed to delivering top-notch service and building lasting relationships with our users. Welcome to the future of convenience!
@@ -563,7 +660,7 @@ function AboutUsSection({ theme, aboutSectionAnimatedStyle }) {
           zIndex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: isMobile ? 32 : 0,
+          marginTop: isMobile ? 36 : 0,
           width: '100%',
         }}
         accessible accessibilityLabel="About Us illustration"
@@ -963,21 +1060,39 @@ export default function LandingScreen({ navigation, route }) {
           </View>
         </View>
         <AboutUsSection theme={theme} aboutSectionAnimatedStyle={aboutSectionAnimatedStyle} />
-        <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
-          <Text style={styles.sectionTitle}>How It Works</Text>
-          <View style={styles.howItWorksStepsContainer}>
+        <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }], backgroundColor: '#f9fbfd', borderRadius: 28, boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff10' : undefined, marginTop: 24, marginBottom: 32, paddingVertical: 40, paddingHorizontal: 24, position: 'relative', overflow: 'hidden' }]}> 
+          {/* Soft background accent shape */}
+          {Platform.OS === 'web' && (
+            <svg style={{ position: 'absolute', top: -60, left: -80, zIndex: 0 }} width="300" height="300" viewBox="0 0 300 300">
+              <ellipse cx="150" cy="150" rx="120" ry="80" fill="#bae6fd" opacity="0.18" filter="blur(20px)" />
+            </svg>
+          )}
+          <Text style={[styles.sectionTitle, { fontSize: 32, color: '#007AFF', marginBottom: 32, letterSpacing: 0.5, textAlign: 'center', fontWeight: '900', textShadowColor: Platform.OS === 'web' ? '#bae6fd' : undefined, textShadowOffset: Platform.OS === 'web' ? { width: 0, height: 2 } : undefined, textShadowRadius: Platform.OS === 'web' ? 8 : undefined }]}>How It Works</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', flexWrap: 'wrap', marginTop: 10, zIndex: 1 }}>
             {steps.map((step, index) => (
               <AnimatedHowItWorksStep key={step.id} step={step} index={index} />
             ))}
           </View>
         </Animated.View>
-        <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
-          <Text style={styles.sectionTitle}>What Our Users Say</Text>
+        <Animated.View style={[styles.sectionHowItWorks, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }], backgroundColor: '#f9fbfd', borderRadius: 28, boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff10' : undefined, marginTop: 0, marginBottom: 32, paddingVertical: 40, paddingHorizontal: 24, position: 'relative', overflow: 'hidden' }]}> 
+          {/* Soft background accent shape for testimonials */}
+          {Platform.OS === 'web' && (
+            <svg style={{ position: 'absolute', top: -60, right: -80, zIndex: 0 }} width="300" height="300" viewBox="0 0 300 300">
+              <ellipse cx="150" cy="150" rx="120" ry="80" fill="#a7f3d0" opacity="0.13" filter="blur(20px)" />
+            </svg>
+          )}
+          <Text style={[styles.sectionTitle, { fontSize: 32, color: '#007AFF', marginBottom: 32, letterSpacing: 0.5, textAlign: 'center', fontWeight: '900', textShadowColor: Platform.OS === 'web' ? '#a7f3d0' : undefined, textShadowOffset: Platform.OS === 'web' ? { width: 0, height: 2 } : undefined, textShadowRadius: Platform.OS === 'web' ? 8 : undefined }]}>What Our Users Say</Text>
           <TestimonialCarousel testimonials={testimonials} />
         </Animated.View>
-        <Animated.View style={[styles.sectionCTA, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }]}>
-          <Text style={styles.ctaHeadline}>Ready to Simplify Your Life?</Text>
-          <Text style={styles.ctaSubheadline}>Join thousands of satisfied users and experience the future of digital convenience with Axzora.</Text>
+        <Animated.View style={[styles.sectionCTA, { opacity: aboutSectionAnim, transform: [{ translateY: aboutSectionAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }], backgroundColor: '#007AFF', borderRadius: 28, boxShadow: Platform.OS === 'web' ? '0 8px 32px #007aff28' : undefined, marginTop: 0, marginBottom: 36, paddingVertical: 56, paddingHorizontal: 24, position: 'relative', overflow: 'hidden' }]}> 
+          {/* Soft animated background accent for CTA */}
+          {Platform.OS === 'web' && (
+            <svg style={{ position: 'absolute', top: -60, left: -80, zIndex: 0 }} width="300" height="300" viewBox="0 0 300 300">
+              <ellipse cx="150" cy="150" rx="120" ry="80" fill="#bae6fd" opacity="0.18" filter="blur(20px)" />
+            </svg>
+          )}
+          <Text style={[styles.ctaHeadline, { fontSize: 38, color: '#fff', fontWeight: '900', marginBottom: 18, letterSpacing: 0.5, textAlign: 'center', textShadowColor: '#bae6fd', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 }]}>Ready to Simplify Your Life?</Text>
+          <Text style={[styles.ctaSubheadline, { fontSize: 20, color: 'rgba(255,255,255,0.92)', marginBottom: 36, textAlign: 'center', letterSpacing: 0.2 }]}>Join thousands of satisfied users and experience the future of digital convenience with Axzora.</Text>
           <Animated.View
             style={[
               { opacity: aboutSectionAnim },
@@ -988,8 +1103,8 @@ export default function LandingScreen({ navigation, route }) {
               },
             ]}
           >
-            <TouchableOpacity style={styles.ctaButtonLarge}>
-              <Text style={styles.ctaButtonText}>Get Started Today</Text>
+            <TouchableOpacity style={[styles.ctaButtonLarge, { backgroundColor: '#fff', shadowColor: '#007AFF', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 18, elevation: 8, borderRadius: 32, marginTop: 8, ...Platform.select({ web: { transition: 'background 0.18s, transform 0.18s', cursor: 'pointer' } }) }]} activeOpacity={0.85}>
+              <Text style={[styles.ctaButtonText, { color: '#007AFF', fontWeight: 'bold', fontSize: 20, letterSpacing: 0.5 }]}>Get Started Today</Text>
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
@@ -1107,10 +1222,25 @@ function AnimatedHowItWorksStep({ step, index }) {
   };
 
   return (
-    <Animated.View style={[styles.howItWorksStep, stepStyle]}>
-      <Text style={styles.stepNumber}>{step.number}</Text>
-      <Text style={styles.stepTitle}>{step.title}</Text>
-      <Text style={styles.stepDescription}>{step.description}</Text>
+    <Animated.View style={[{
+      alignItems: 'center',
+      width: 320,
+      minHeight: 180,
+      margin: 16,
+      backgroundColor: '#fff',
+      borderRadius: 22,
+      padding: 32,
+      shadowColor: '#007AFF',
+      shadowOpacity: 0.10,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
+      zIndex: 2,
+      ...Platform.select({ web: { boxShadow: '0 8px 32px #007aff13', transition: 'box-shadow 0.25s, transform 0.25s' } }),
+    }, stepStyle]}>
+      <Text style={{ fontSize: 38, fontWeight: '900', color: '#007AFF', marginBottom: 12, textShadowColor: '#bae6fd', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 }}> {step.number} </Text>
+      <Text style={{ fontSize: 22, fontWeight: '700', color: '#23272f', marginBottom: 8, textAlign: 'center', letterSpacing: 0.2 }}>{step.title}</Text>
+      <Text style={{ fontSize: 16, color: '#555', textAlign: 'center', lineHeight: 24 }}>{step.description}</Text>
     </Animated.View>
   );
 }
@@ -1160,15 +1290,16 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f4f6fa',
   },
-  heroContainer: {
-    minHeight: 380,
+  heroSection: {
     width: '100%',
+    minHeight: 240,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#007AFF',
-    marginBottom: 24,
+    marginBottom: 36,
+    borderRadius: 28,
+    ...Platform.select({ web: { boxShadow: '0 8px 32px #007aff18', transition: 'box-shadow 0.25s' } }),
   },
   heroFloatingShape: {
     position: 'absolute',
@@ -1182,46 +1313,53 @@ const styles = StyleSheet.create({
     zIndex: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
-    paddingBottom: 60,
+    paddingTop: 56,
+    paddingBottom: 56,
     width: '100%',
+    maxWidth: 700,
   },
-  heroHeadline: {
+  heroTitle: {
     fontSize: 44,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     letterSpacing: 1.2,
     textShadowColor: 'rgba(0,0,0,0.10)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+    ...Platform.select({ web: { transition: 'color 0.18s' } }),
   },
-  heroSubheadline: {
-    fontSize: 20,
+  heroSubtitle: {
+    fontSize: 22,
     color: 'rgba(255,255,255,0.92)',
     textAlign: 'center',
-    marginBottom: 32,
     fontWeight: '400',
     letterSpacing: 0.2,
     maxWidth: 600,
+    marginBottom: 24,
+    ...Platform.select({ web: { transition: 'color 0.18s' } }),
   },
   ctaButton: {
     backgroundColor: '#fff',
-    paddingHorizontal: 36,
-    paddingVertical: 16,
-    borderRadius: 30,
+    paddingHorizontal: 44,
+    paddingVertical: 20,
+    borderRadius: 32,
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.13,
-    shadowRadius: 10,
+    shadowRadius: 14,
     elevation: 4,
-    marginTop: 8,
+    marginTop: 12,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'background 0.18s, transform 0.18s',
+      ':hover': { backgroundColor: '#e0f2fe', transform: 'scale(1.04)' },
+      ':active': { backgroundColor: '#bae6fd', transform: 'scale(0.97)' },
+    } }),
   },
   ctaButtonText: {
     color: '#007AFF',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 20,
     letterSpacing: 0.5,
   },
   sectionServices: {
@@ -1614,10 +1752,10 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 8,
   },
   ctaButtonText: {
     color: '#007AFF',

@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Dimensions, KeyboardAvoidingView, ScrollView, Modal, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useUser } from '../contexts/UserContext';
-
-const showAlert = (title, message) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
-};
+import { useToast } from '../components/ToastContext';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -25,6 +18,7 @@ export default function LoginScreen({ navigation }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [loginError, setLoginError] = useState('');
   const { updateAuthData, getValidAccessToken } = useUser();
+  const toast = useToast();
 
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
@@ -58,19 +52,20 @@ export default function LoginScreen({ navigation }) {
           data.expires_at,
           data.refresh_token
         );
+        toast.showToast('Login successful!', 'success');
       } else {
         if (data.error_code === 'invalid_credentials' || data.msg === 'Invalid login credentials') {
           setLoginError('Invalid email or password');
-          showAlert('Login Error', 'Invalid email or password');
+          toast.showToast('Invalid email or password', 'error');
         } else {
           let errorMsg = data.error_description || data.msg || data.error || 'Login failed.';
           setLoginError(errorMsg);
-          showAlert('Login Error', errorMsg);
+          toast.showToast(errorMsg, 'error');
         }
       }
     } catch (error) {
       setLoginError(error.message || 'An error occurred.');
-      showAlert('Login Error', error.message || 'An error occurred.');
+      toast.showToast(error.message || 'An error occurred.', 'error');
     } finally {
       setIsSigningIn(false);
     }
@@ -92,16 +87,16 @@ export default function LoginScreen({ navigation }) {
       });
       const data = await response.json();
       if (response.ok) {
-        showAlert('Success', 'Account created! Please check your email to verify your account.');
+        toast.showToast('Account created! Please check your email to verify your account.', 'success');
         setModalVisible(false);
         setSignupData({ name: '', email: '', phone: '', password: '' });
         navigation.navigate('Landing', { showWelcome: true });
       } else {
         let errorMsg = data.error_description || data.msg || data.error || 'Signup failed.';
-        showAlert('Signup Error', errorMsg);
+        toast.showToast(errorMsg, 'error');
       }
     } catch (error) {
-      showAlert('Signup Error', error.message || 'An error occurred.');
+      toast.showToast(error.message || 'An error occurred.', 'error');
     } finally {
       setIsSigningUp(false);
     }
